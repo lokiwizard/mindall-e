@@ -91,3 +91,6 @@ class VQGAN(nn.Module):
         ckpt = torch.load(path, map_location='cpu')['state_dict']
         self.load_state_dict(ckpt, strict=strict)
         print(f'{path} successfully restored..')
+
+if __name__ == "__main__":
+    pass
