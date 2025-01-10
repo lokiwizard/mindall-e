@@ -35,6 +35,16 @@ class MultiHeadSelfAttention(nn.Module):
                  attn_pdrop: float,
                  attn_bias: bool,
                  use_mask: bool = True):
+        """
+        ctx_len: 上下文长度，即输入序列的最大长度。
+        embed_dim: 嵌入维度（词向量维度）。通常等于键（key）、查询（query）、值（value）的维度。
+        n_heads: 多头数量，将 embed_dim 分割为多个头部进行并行计算。
+        resid_pdrop: 残差连接上的 dropout 概率。
+        attn_pdrop: 自注意力分数矩阵的 dropout 概率。
+        attn_bias: 是否为线性投影添加偏置。
+        use_mask: 是否使用掩码（mask），用于控制未来时刻的访问（例如在解码时）。
+        """
+
         super().__init__()
         assert embed_dim % n_heads == 0
 

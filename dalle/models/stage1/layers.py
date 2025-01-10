@@ -21,6 +21,7 @@ def Normalize(in_channels):
 
 
 class Upsample(nn.Module):
+    # 上采样
     def __init__(self, in_channels, with_conv):
         super().__init__()
         self.with_conv = with_conv
@@ -32,6 +33,8 @@ class Upsample(nn.Module):
                                         padding=1)
 
     def forward(self, x):
+        # 1. 使用最近邻插值上采样2倍
+        # 2. 使用卷积层，不改变特征图的大小
         x = torch.nn.functional.interpolate(x, scale_factor=2.0, mode="nearest")
         if self.with_conv:
             x = self.conv(x)
@@ -40,6 +43,7 @@ class Upsample(nn.Module):
 
 class Downsample(nn.Module):
     def __init__(self, in_channels, with_conv):
+        # 下采样
         super().__init__()
         self.with_conv = with_conv
         if self.with_conv:
@@ -52,7 +56,7 @@ class Downsample(nn.Module):
 
     def forward(self, x):
         if self.with_conv:
-            pad = (0, 1, 0, 1)
+            pad = (0, 1, 0, 1)  # 填充顺序为左右上下
             x = torch.nn.functional.pad(x, pad, mode="constant", value=0)
             x = self.conv(x)
         else:
@@ -185,6 +189,19 @@ class Encoder(nn.Module):
                  resolution: int,
                  z_channels: int,
                  double_z: Optional[bool] = None) -> None:
+        """
+        ch: 基础通道数
+        out_ch: 输出通道数
+        ch_mult: 每一层特征图的通道数倍增因子（默认是 [1, 2, 4, 8]）
+        num_res_blocks: 每一层包含的残差块数量
+        attn_resolutions: 需要添加注意力模块的分辨率列表
+        pdrop: Dropout 概率。
+        resamp_with_conv: 是否使用卷积进行下采样。
+        in_channels: 输入图像的通道数（如 RGB 图像的通道数为 3）。
+        resolution: 输入图像的分辨率（假设是方形图像）。
+        z_channels: 潜在空间的通道数。
+        double_z: 是否将潜在空间的通道数翻倍（通常用于生成模型中的均值和方差分离）
+        """
         super().__init__()
         self.ch = ch
         self.temb_ch = 0
@@ -200,7 +217,7 @@ class Encoder(nn.Module):
                                        stride=1,
                                        padding=1)
 
-        curr_res = resolution
+        curr_res = resolution  # 当前的分辨率
         in_ch_mult = (1,)+tuple(ch_mult)
         self.down = nn.ModuleList()
         for i_level in range(self.num_resolutions):
@@ -220,6 +237,7 @@ class Encoder(nn.Module):
             down.block = block
             down.attn = attn
             if i_level != self.num_resolutions-1:
+                # 如果不是最后一层，添加下采样层
                 down.downsample = Downsample(block_in, resamp_with_conv)
                 curr_res = curr_res // 2
             self.down.append(down)
@@ -371,3 +389,18 @@ class Decoder(nn.Module):
         h = nonlinearity(h)
         h = self.conv_out(h)
         return h
+
+
+if __name__ == "__main__":
+    encoder = Encoder(ch=64,
+                        out_ch=256,
+                        ch_mult=(1, 2, 4, 8),
+                        num_res_blocks=2,
+                        attn_resolutions=(16, ),
+                        pdrop=0.0,
+                        resamp_with_conv=True,
+                        in_channels=3,
+                        resolution=256,
+                        z_channels=256,
+                        double_z=True)
+    print(encoder)
